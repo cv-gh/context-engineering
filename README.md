@@ -319,151 +319,147 @@ Token optimization requires application-specific strategies tailored to distinct
 
 ---
 
-### 1. Conversational Chat Applications
+### 💬 1. Conversational Chat Applications
 
-**Examples:** Customer support bots, virtual assistants, AI companions, internal help desks.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Conversation history</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>35–55%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>User experience</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Customer support bots, virtual assistants, AI companions, internal help desks.
 
-```
-┌────────────────────────────────────────────────────┐
-│  CHAT APPLICATION — TOKEN FLOW                     │
-│                                                    │
-│  System Prompt ──────── Fixed (500–1500 tokens)    │
-│  Conversation History ── Growing (unbounded)       │
-│  User Preferences ────── Small (100–300 tokens)    │
-│  Retrieved Knowledge ─── Variable (0–3000 tokens)  │
-│  Current Turn ─────────── Small (50–200 tokens)    │
-│                                                    │
-│  PRIMARY COST DRIVER: Conversation history         │
-│  SECONDARY DRIVER: Repeated system prompts         │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 500–1,500 tokens | `Fixed` |
+| 📈 Conversation History | Unbounded | `Growing` ← **primary cost driver** |
+| 👤 User Preferences | 100–300 tokens | `Stable` |
+| 📚 Retrieved Knowledge | 0–3,000 tokens | `Variable` |
+| 💬 Current Turn | 50–200 tokens | `Per-request` |
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Audit conversation growth.** Plot input tokens per turn across sessions. A linear upward trend indicates unbounded history accumulation — the most common waste pattern in chat applications.
 2. **Measure repeat ratio.** Calculate how often the same system prompt and persona instructions are re-sent across turns. This is the prime candidate for prompt/prefix caching.
 3. **Profile retrieval triggers.** Track how many turns actually require external knowledge versus those answerable from conversation context alone.
 4. **Identify dead turns.** Many conversations include greetings, confirmations ("OK", "Thanks"), and other low-information turns that consume budget without adding signal.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Implement sliding window (last 10–15 turns) with summarization of older turns | 30–50% input reduction |
-| 2 | Enable prompt/prefix caching for the system prompt | 50–90% savings on cached prefix |
-| 3 | Filter low-information turns (greetings, acknowledgments) from history | 5–15% input reduction |
-| 4 | Compress user preferences into structured key-value format | 10–20% reduction on preference payload |
-| 5 | Apply conditional RAG — retrieve only when the query requires external knowledge | 20–40% reduction on retrieval-heavy turns |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Sliding window (last 10–15 turns) + summarization of older turns | `▓▓▓▓▓▓░░░░` 30–50% | 🟡 Med |
+| **2** | Enable prompt/prefix caching for the system prompt | `▓▓▓▓▓▓▓▓░░` 50–90% | 🟢 Low |
+| **3** | Filter low-information turns (greetings, acknowledgments) | `▓▓░░░░░░░░` 5–15% | 🟢 Low |
+| **4** | Compress preferences into structured key-value format | `▓▓░░░░░░░░` 10–20% | 🟢 Low |
+| **5** | Conditional RAG — retrieve only when query requires external knowledge | `▓▓▓▓░░░░░░` 20–40% | 🟡 Med |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Aggressive summarization | Lower cost, faster responses | Loss of conversational nuance; user may need to repeat details |
 | Short sliding window | Predictable token budgets | Context loss in long sessions; user frustration when prior details are missing |
 | Filtering low-info turns | Reduced noise | Occasional loss of relevant conversational cues |
 | Skipping RAG on some turns | Fewer tokens, lower latency | Hallucination on turns that needed retrieval but were misclassified |
 
-#### Finding the Balance
-
-For chat applications, **user experience is the binding constraint**. A 10% cost reduction that causes users to repeat themselves is a net loss. Start with prompt caching (zero quality risk) and conversation summarization (low risk), then progressively tighten the sliding window while monitoring user satisfaction scores and escalation rates.
+> [!TIP]
+> **Finding the Balance** — For chat applications, **user experience is the binding constraint**. A 10% cost reduction that causes users to repeat themselves is a net loss. Start with prompt caching (zero quality risk) and conversation summarization (low risk), then progressively tighten the sliding window while monitoring user satisfaction scores and escalation rates.
 
 ---
 
-### 2. Enterprise Search and Q&A
+### 🔍 2. Enterprise Search and Q&A
 
-**Examples:** Internal knowledge bases, document Q&A, regulatory compliance search, legal research assistants.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Retrieved document chunks</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>45–70%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Answer accuracy</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Internal knowledge bases, document Q&A, regulatory compliance search, legal research assistants.
 
-```
-┌────────────────────────────────────────────────────┐
-│  SEARCH/Q&A APPLICATION — TOKEN FLOW               │
-│                                                    │
-│  System Prompt ──────── Fixed (300–800 tokens)     │
-│  Retrieved Chunks ────── Large (2000–8000 tokens)  │
-│  Query ───────────────── Small (20–100 tokens)     │
-│  Metadata/Filters ────── Small (50–200 tokens)     │
-│                                                    │
-│  PRIMARY COST DRIVER: Retrieved document chunks    │
-│  SECONDARY DRIVER: Chunk count × chunk size        │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 300–800 tokens | `Fixed` |
+| 📄 Retrieved Chunks | 2,000–8,000 tokens | `Variable` ← **primary cost driver** |
+| 🔎 Query | 20–100 tokens | `Per-request` |
+| 🏷️ Metadata/Filters | 50–200 tokens | `Per-request` |
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Measure retrieval precision.** For a sample of queries, evaluate how many retrieved chunks actually contribute to the final answer. Low precision (< 50%) signals significant waste.
 2. **Detect duplicate content.** Enterprise corpora frequently contain near-duplicate documents (policy versions, template variations). Profile deduplication rates in your index.
 3. **Analyze chunk utilization.** Inspect LLM attention patterns or citation behavior to determine whether full chunks are consumed or only fragments are relevant.
 4. **Track query complexity distribution.** Many enterprise queries are simple lookups that do not require five retrieved chunks — classify and route accordingly.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Reduce chunk size from 1024–2048 to 256–512 tokens | 20–35% input reduction |
-| 2 | Add cross-encoder re-ranking; retrieve broadly (e.g., top-20–50), inject top-3–5 based on query complexity | 40–60% chunk reduction |
-| 3 | Apply semantic deduplication at index and retrieval time | 10–25% reduction on redundant corpora |
-| 4 | Implement query routing: simple queries get 1–2 chunks, complex get 3–5 | 15–30% average reduction |
-| 5 | Summarize long chunks to core claims before context insertion | 30–50% per-chunk reduction |
-| 6 | Deploy semantic caching for high-frequency queries | 100% savings on cache hits |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Reduce chunk size from 1024–2048 to 256–512 tokens | `▓▓▓░░░░░░░` 20–35% | 🟢 Low |
+| **2** | Cross-encoder re-ranking; retrieve broadly (top-20–50), inject top-3–5 | `▓▓▓▓▓▓░░░░` 40–60% | 🟡 Med |
+| **3** | Semantic deduplication at index and retrieval time | `▓▓░░░░░░░░` 10–25% | 🟡 Med |
+| **4** | Query routing: simple queries get 1–2 chunks, complex get 3–5 | `▓▓▓░░░░░░░` 15–30% | 🟡 Med |
+| **5** | Summarize long chunks to core claims before context insertion | `▓▓▓▓▓░░░░░` 30–50% | 🟡 Med |
+| **6** | Semantic caching for high-frequency queries | `▓▓▓▓▓▓▓▓▓▓` 100% hits | 🔴 High |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Smaller chunks | Lower cost, higher retrieval precision | Loss of cross-paragraph context; answers may miss surrounding details |
 | Aggressive re-ranking | Fewer irrelevant chunks | Occasional filtering of a relevant chunk ranked below threshold |
 | Chunk summarization | Compact context, faster inference | Loss of specific details — exact figures, dates, or quoted language |
 | Query routing with fewer chunks | Lower cost on simple queries | Misclassification of complex queries as simple, causing incomplete answers |
 
-#### Finding the Balance
-
-For search applications, **answer accuracy is the binding constraint**. Start with re-ranking and deduplication (high impact, low quality risk), then progressively reduce chunk sizes while monitoring answer faithfulness scores. Implement chunk summarization selectively for non-compliance queries where minor detail loss is acceptable; retain full chunks for compliance and legal applications where exact language matters.
+> [!TIP]
+> **Finding the Balance** — For search applications, **answer accuracy is the binding constraint**. Start with re-ranking and deduplication (high impact, low quality risk), then progressively reduce chunk sizes while monitoring answer faithfulness scores. Implement chunk summarization selectively for non-compliance queries where minor detail loss is acceptable; retain full chunks for compliance and legal applications where exact language matters.
 
 ---
 
-### 3. Autonomous Agent Systems
+### 🤖 3. Autonomous Agent Systems
 
-**Examples:** AI coding agents, research agents, data analysis agents, workflow automation, tool-using assistants.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Multi-turn reasoning loops</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>40–65%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Task reliability</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** AI coding agents, research agents, data analysis agents, workflow automation, tool-using assistants.
 
-```
-┌────────────────────────────────────────────────────┐
-│  AGENT APPLICATION — TOKEN FLOW                    │
-│                                                    │
-│  System Prompt ──────── Large (1000–3000 tokens)   │
-│  Tool Definitions ────── Large (500–5000 tokens)   │
-│  Reasoning Trace ─────── Growing (unbounded)       │
-│  Tool Results ─────────── Variable (100–10K+ tokens) │
-│  Working Memory ───────── Variable (500–3000 tokens) │
-│                                                    │
-│  PRIMARY COST DRIVER: Multi-turn reasoning loops   │
-│  SECONDARY DRIVER: Verbose tool outputs            │
-│  COMPOUNDING FACTOR: Cost scales with step count   │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 1,000–3,000 tokens | `Fixed` |
+| 🔧 Tool Definitions | 500–5,000 tokens | `Semi-stable` |
+| 🧠 Reasoning Trace | Unbounded | `Growing` ← **primary cost driver** |
+| 📦 Tool Results | 100–10,000+ tokens | `Variable` |
+| 💾 Working Memory | 500–3,000 tokens | `Variable` |
+
+> ⚠️ **Compounding factor:** Cost scales with step count. Each turn re-sends the full accumulated context.
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Profile step count distribution.** Agents that routinely exceed 10–15 steps per task are accumulating context at a compounding rate. Plot cost per task versus step count to identify runaway loops.
 2. **Analyze tool output verbosity.** Raw tool outputs (API responses, file contents, database results) are often 10–100× larger than the information the agent actually needs. Compare raw output size to the tokens the agent references in subsequent reasoning.
 3. **Audit tool definition overhead.** If the agent has 20+ tools defined, tool schemas alone may consume 3,000–5,000 tokens per turn — even when most tools are unused for a given task.
 4. **Track reasoning redundancy.** Agents often restate conclusions from prior steps in their chain-of-thought. This repetition compounds across turns.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Compress tool outputs: extract only fields the agent needs, discard raw payloads | 40–70% per tool call |
-| 2 | Summarize reasoning trace every N steps; retain conclusions, drop chain-of-thought details | 30–50% on long-running tasks |
-| 3 | Implement dynamic tool loading: include only relevant tool definitions per step | 20–60% on tool definition overhead |
-| 4 | Set step budgets with early termination on diminishing returns | 15–30% total task cost |
-| 5 | Cache deterministic tool results (database lookups, API calls with stable data) with TTLs and invalidation triggers | Variable; high for repeated patterns |
-| 6 | Use structured intermediate state instead of natural language scratchpads | 20–40% on working memory |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Compress tool outputs: extract only needed fields, discard raw payloads | `▓▓▓▓▓▓▓░░░` 40–70% | 🟡 Med |
+| **2** | Summarize reasoning trace every N steps; retain conclusions only | `▓▓▓▓▓░░░░░` 30–50% | 🟡 Med |
+| **3** | Dynamic tool loading: include only relevant tool definitions per step | `▓▓▓▓░░░░░░` 20–60% | 🟡 Med |
+| **4** | Step budgets with early termination on diminishing returns | `▓▓▓░░░░░░░` 15–30% | 🟢 Low |
+| **5** | Cache deterministic tool results with TTLs and invalidation triggers | `▓▓▓▓▓░░░░░` Variable | 🔴 High |
+| **6** | Structured intermediate state instead of natural language scratchpads | `▓▓▓▓░░░░░░` 20–40% | 🟡 Med |
 
 ```python
 # Tool output compression for agent systems
@@ -476,509 +472,497 @@ full_response = api_client.get_order(order_id="12345")  # ~2000 tokens
 compressed = compress_tool_output(full_response, ["status", "total", "eta"])  # ~30 tokens
 ```
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Tool output compression | Substantial per-step savings (40–70% per tool call) | Agent loses access to critical information excluded from the filtered response |
 | Reasoning trace summarization | Prevents context overflow on long tasks | Loss of intermediate reasoning; harder to debug failures |
 | Dynamic tool loading | Lower per-turn overhead | Missed tool availability; agent cannot pivot to an unloaded tool mid-step |
 | Step budgets | Cost predictability | Premature termination on tasks that genuinely require more steps |
 
-#### Finding the Balance
-
-For agent systems, **task reliability is the binding constraint**. Token costs scale linearly with step count but compound when context accumulation is unbounded across multi-turn reasoning chains, making agents the highest-cost application type per task. Start with tool output compression (highest ROI, lowest risk), then implement reasoning summarization with a generous retention policy. Set step budgets based on empirical task-completion distributions — not arbitrary limits. Reserve dynamic tool loading for agents with large tool inventories (15+ tools).
+> [!TIP]
+> **Finding the Balance** — For agent systems, **task reliability is the binding constraint**. Token costs scale linearly with step count but compound when context accumulation is unbounded across multi-turn reasoning chains, making agents the highest-cost application type per task. Start with tool output compression (highest ROI, lowest risk), then implement reasoning summarization with a generous retention policy. Set step budgets based on empirical task-completion distributions — not arbitrary limits. Reserve dynamic tool loading for agents with large tool inventories (15+ tools).
 
 ---
 
-### 4. Code Generation and Developer Tools
+### 💻 4. Code Generation and Developer Tools
 
-**Examples:** AI code assistants, code review tools, automated refactoring, test generation, documentation generators.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Repository context scope</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>40–60%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Code correctness</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** AI code assistants, code review tools, automated refactoring, test generation, documentation generators.
 
-```
-┌────────────────────────────────────────────────────┐
-│  CODE GENERATION — TOKEN FLOW                      │
-│                                                    │
-│  System Prompt ──────── Medium (500–1500 tokens)   │
-│  Repository Context ─── Large (2000–15000 tokens)  │
-│  Current File ─────────── Variable (500–5000)      │
-│  Related Files ────────── Variable (1000–8000)     │
-│  Language/Framework ────── Small (100–500 tokens)   │
-│  User Instructions ────── Small (50–300 tokens)    │
-│                                                    │
-│  PRIMARY COST DRIVER: Repository context scope     │
-│  SECONDARY DRIVER: Related file inclusion          │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 500–1,500 tokens | `Fixed` |
+| 🗂️ Repository Context | 2,000–15,000 tokens | `Variable` ← **primary cost driver** |
+| 📄 Current File | 500–5,000 tokens | `Variable` |
+| 📎 Related Files | 1,000–8,000 tokens | `Variable` |
+| 🏗️ Language/Framework | 100–500 tokens | `Stable` |
+| ✏️ User Instructions | 50–300 tokens | `Per-request` |
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Measure file relevance decay.** Track which included files the model actually references in its output. Files beyond the immediate dependency graph rarely influence generation quality.
 2. **Profile context-to-output ratio.** Code generation often has extreme ratios — 10,000 input tokens producing 200 output tokens. High ratios signal over-inclusion of repository context.
 3. **Audit boilerplate repetition.** Common patterns like import blocks, framework boilerplate, and configuration templates are repeated across requests for the same project.
 4. **Identify scope misalignment.** A request to "fix the null check on line 42" does not require the entire 500-line file — only the function containing that line and its immediate dependencies.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Scope context to the active function/class plus direct imports, not entire files | 40–60% input reduction |
-| 2 | Use AST-based extraction to include only relevant code symbols and their signatures | 30–50% reduction on related file context |
-| 3 | Cache project-level context (framework version, coding standards, type definitions) via prefix caching | 50–90% on stable project context |
-| 4 | Replace full file inclusions with skeleton views (signatures, docstrings, structure) for non-focal files | 60–80% per included file |
-| 5 | Deduplicate common patterns across requests within the same session | 10–20% session-level reduction |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Scope context to the active function/class plus direct imports | `▓▓▓▓▓▓░░░░` 40–60% | 🟡 Med |
+| **2** | AST-based extraction: include only relevant code symbols and signatures | `▓▓▓▓▓░░░░░` 30–50% | 🔴 High |
+| **3** | Cache project-level context (framework, standards, types) via prefix caching | `▓▓▓▓▓▓▓▓░░` 50–90% | 🟢 Low |
+| **4** | Replace full files with skeleton views (signatures, docstrings) for non-focal files | `▓▓▓▓▓▓▓░░░` 60–80% | 🟡 Med |
+| **5** | Deduplicate common patterns across requests in the same session | `▓▓░░░░░░░░` 10–20% | 🟢 Low |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Function-scoped context | Significant input reduction | Missing cross-function dependencies; generated code may break callers |
 | AST-based extraction | Precise, minimal context | Incomplete understanding of runtime behavior and side effects |
 | Skeleton views for non-focal files | Compact reference context | Loss of implementation details needed for complex refactoring |
 | Aggressive scope reduction | Fast, cheap completions | Model generates syntactically correct code that fails during integration or runtime |
 
-#### Finding the Balance
-
-For code generation, **correctness is the binding constraint**. Incorrect code costs more in developer time than the tokens saved. Apply function-scoping and skeleton views for autocompletion and simple edits. Expand context scope for complex refactoring, cross-file changes, and test generation where broader understanding is essential. Always include type signatures and interface contracts for related files, even when excluding implementation details.
+> [!TIP]
+> **Finding the Balance** — For code generation, **correctness is the binding constraint**. Incorrect code costs more in developer time than the tokens saved. Apply function-scoping and skeleton views for autocompletion and simple edits. Expand context scope for complex refactoring, cross-file changes, and test generation where broader understanding is essential. Always include type signatures and interface contracts for related files, even when excluding implementation details.
 
 ---
 
-### 5. Content Generation Pipelines
+### ✍️ 5. Content Generation Pipelines
 
-**Examples:** Marketing copy, report generation, email drafting, translation, summarization at scale.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Source material + output</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>30–50%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Brand fidelity</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Marketing copy, report generation, email drafting, translation, summarization at scale.
 
-```
-┌────────────────────────────────────────────────────┐
-│  CONTENT GENERATION — TOKEN FLOW                   │
-│                                                    │
-│  System Prompt ──────── Medium (500–2000 tokens)   │
-│  Style/Brand Guide ────── Medium (500–2000 tokens) │
-│  Source Material ──────── Large (1000–10000 tokens) │
-│  Examples/Templates ─── Medium (500–2000 tokens)   │
-│  Generation Output ────── Large (500–5000 tokens)  │
-│                                                    │
-│  PRIMARY COST DRIVER: Source material + output      │
-│  SECONDARY DRIVER: Repeated style guides            │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 500–2,000 tokens | `Fixed` |
+| 🎨 Style/Brand Guide | 500–2,000 tokens | `Stable` |
+| 📰 Source Material | 1,000–10,000 tokens | `Variable` ← **primary cost driver** |
+| 📋 Examples/Templates | 500–2,000 tokens | `Semi-stable` |
+| ✏️ Generation Output | 500–5,000 tokens | `Variable` |
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Audit output token consumption.** Content generation is often the most output-heavy use case. Unbounded generation instructions ("write a comprehensive report") produce unpredictable and frequently excessive output tokens.
 2. **Measure template reuse.** Style guides, brand voices, and formatting instructions are identical across requests — prime candidates for caching.
 3. **Profile source material utilization.** For summarization tasks, compare source length to the information density in the output. Low compression ratios indicate opportunities for pre-summarization.
 4. **Identify batch patterns.** Content pipelines often generate multiple variants (A/B test copies, translations) from the same source — an ideal semantic caching scenario.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Set explicit `max_tokens` on all generation requests; define output length constraints in the prompt | 20–40% output reduction |
-| 2 | Cache style guides and brand instructions via prefix caching | 50–90% on repeated prefix |
-| 3 | Pre-summarize source material for length-constrained tasks (e.g., social media copy from long articles) | 40–70% input reduction |
-| 4 | Use one high-quality example instead of multiple similar examples in few-shot prompts | 30–50% on example payload |
-| 5 | Batch similar generation requests and reuse shared context | 20–40% amortized savings |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Set explicit `max_tokens`; define output length constraints in prompt | `▓▓▓▓░░░░░░` 20–40% | 🟢 Low |
+| **2** | Cache style guides and brand instructions via prefix caching | `▓▓▓▓▓▓▓▓░░` 50–90% | 🟢 Low |
+| **3** | Pre-summarize source material for length-constrained tasks | `▓▓▓▓▓▓░░░░` 40–70% | 🟡 Med |
+| **4** | One high-quality example instead of multiple similar few-shot examples | `▓▓▓▓▓░░░░░` 30–50% | 🟢 Low |
+| **5** | Batch similar generation requests and reuse shared context | `▓▓▓▓░░░░░░` 20–40% | 🟡 Med |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Output length constraints | Predictable costs; concise output | Truncated content that feels incomplete or misses key points |
 | Pre-summarization of sources | Lower input costs | Loss of specific details, quotes, or data points from source material |
 | Fewer examples | Reduced input tokens | Lower output style fidelity; model may drift from desired tone |
 | Aggressive caching | Near-zero cost on repeats | Stale cached responses when source material or requirements change |
 
-#### Finding the Balance
-
-For content generation, **brand fidelity and output quality are the binding constraints**. Start with prefix caching for style guides (zero quality risk) and explicit `max_tokens` limits. Pre-summarize sources only when the output format is inherently short (tweets, headlines, ad copy). For long-form content where source details matter (reports, whitepapers), retain full source material and optimize elsewhere.
+> [!TIP]
+> **Finding the Balance** — For content generation, **brand fidelity and output quality are the binding constraints**. Start with prefix caching for style guides (zero quality risk) and explicit `max_tokens` limits. Pre-summarize sources only when the output format is inherently short (tweets, headlines, ad copy). For long-form content where source details matter (reports, whitepapers), retain full source material and optimize elsewhere.
 
 ---
 
-### 6. Classification and Extraction Services
+### 🏷️ 6. Classification and Extraction Services
 
-**Examples:** Sentiment analysis, entity extraction, intent classification, document labeling, PII detection, invoice parsing.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Input document length</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>50–80%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Precision / recall</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Sentiment analysis, entity extraction, intent classification, document labeling, PII detection, invoice parsing.
 
-```
-┌────────────────────────────────────────────────────┐
-│  CLASSIFICATION/EXTRACTION — TOKEN FLOW            │
-│                                                    │
-│  System Prompt ──────── Small (200–600 tokens)     │
-│  Schema/Labels ────────── Small (100–500 tokens)   │
-│  Input Document ───────── Variable (100–5000 tokens) │
-│  Few-Shot Examples ────── Medium (300–1500 tokens)  │
-│  Output ───────────────── Small (10–200 tokens)    │
-│                                                    │
-│  PRIMARY COST DRIVER: Input document length        │
-│  SECONDARY DRIVER: Repeated schema + examples      │
-│  KEY CHARACTERISTIC: Low output-to-input ratio     │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 200–600 tokens | `Fixed` |
+| 🏷️ Schema/Labels | 100–500 tokens | `Stable` |
+| 📄 Input Document | 100–5,000 tokens | `Variable` ← **primary cost driver** |
+| 📋 Few-Shot Examples | 300–1,500 tokens | `Semi-stable` |
+| 📤 Output | 10–200 tokens | `Small` |
+
+> 📉 **Key characteristic:** Low output-to-input ratio (20:1 to 100:1). Overhead from instructions and examples often exceeds the document itself.
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Measure the input-to-output ratio.** Classification tasks typically have ratios of 20:1 to 100:1. If input context is dominated by boilerplate instructions and examples rather than the actual document, the overhead is the optimization target.
 2. **Profile label set stability.** If the classification schema is stable across requests, system prompt + schema + examples are pure caching candidates.
 3. **Evaluate model necessity.** Many classification tasks can be handled by smaller, fine-tuned models at a fraction of the token cost. Compare LLM accuracy against a fine-tuned classifier.
 4. **Detect over-extraction.** If the prompt asks for 15 entity types but most documents contain only 3–4, the schema overhead is disproportionate to the value returned.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Cache the full prompt prefix (system + schema + examples) via provider prefix caching | 50–90% on cached portion |
-| 2 | Use structured output contracts with strict schemas to minimize output tokens | 30–60% output reduction |
-| 3 | Pre-process input documents: strip headers, footers, boilerplate, formatting artifacts | 10–30% input reduction |
-| 4 | Reduce few-shot examples from N to 1 with explicit pattern instructions | 30–50% on example payload |
-| 5 | Route simple documents to fine-tuned small models; reserve LLM for complex cases | 50–80% cost reduction on routed portion |
-| 6 | Batch multiple short documents into a single request where feasible | 20–40% amortized overhead reduction |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Cache full prompt prefix (system + schema + examples) via prefix caching | `▓▓▓▓▓▓▓▓░░` 50–90% | 🟢 Low |
+| **2** | Structured output contracts with strict schemas to minimize output | `▓▓▓▓▓░░░░░` 30–60% | 🟢 Low |
+| **3** | Pre-process input: strip headers, footers, boilerplate, formatting | `▓▓▓░░░░░░░` 10–30% | 🟢 Low |
+| **4** | Reduce few-shot examples from N to 1 with explicit pattern instructions | `▓▓▓▓▓░░░░░` 30–50% | 🟢 Low |
+| **5** | Route simple documents to fine-tuned small models; LLM for complex cases | `▓▓▓▓▓▓▓░░░` 50–80% | 🔴 High |
+| **6** | Batch multiple short documents into a single request | `▓▓▓▓░░░░░░` 20–40% | 🟡 Med |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Prefix caching | Major cost savings on high-volume, stable tasks | Cache invalidation lag when schema changes |
 | Routing to smaller models | Order-of-magnitude cost reduction | Lower accuracy on edge cases; requires maintaining two model pipelines |
 | Batching documents | Lower per-document overhead | Single failure contaminates the batch; harder to trace per-document errors |
 | Input pre-processing | Reduced noise tokens | Accidental removal of content containing relevant entities or signals |
 
-#### Finding the Balance
-
-For classification and extraction, **precision and recall are the binding constraints**. These services are often high-volume (millions of documents/day), making even small per-request savings substantial at scale. Prefix caching should be the first optimization — it is nearly risk-free for stable schemas. Model routing (LLM for complex, fine-tuned for simple) delivers the highest total cost reduction but requires investment in a classification tier and ongoing accuracy monitoring.
+> [!TIP]
+> **Finding the Balance** — For classification and extraction, **precision and recall are the binding constraints**. These services are often high-volume (millions of documents/day), making even small per-request savings substantial at scale. Prefix caching should be the first optimization — it is nearly risk-free for stable schemas. Model routing (LLM for complex, fine-tuned for simple) delivers the highest total cost reduction but requires investment in a classification tier and ongoing accuracy monitoring.
 
 ---
 
-### 7. Multi-Modal Applications
+### 🖼️ 7. Multi-Modal Applications
 
-**Examples:** Image analysis with text, document OCR + interpretation, video summarization, visual Q&A, diagram understanding.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Image token encoding</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>40–75%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Visual detail preservation</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Image analysis with text, document OCR + interpretation, video summarization, visual Q&A, diagram understanding.
 
-```
-┌────────────────────────────────────────────────────┐
-│  MULTI-MODAL APPLICATION — TOKEN FLOW              │
-│                                                    │
-│  System Prompt ──────── Medium (500–1500 tokens)   │
-│  Image Tokens ─────────── Large (provider-dependent; scales with resolution) │
-│  OCR/Extracted Text ──── Variable (500–10000)      │
-│  Text Instructions ────── Small (50–300 tokens)    │
-│  Output ───────────────── Variable (100–2000)      │
-│                                                    │
-│  PRIMARY COST DRIVER: Image token encoding         │
-│  SECONDARY DRIVER: Multiple images per request     │
-│  KEY CHARACTERISTIC: Image tokens are expensive    │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 500–1,500 tokens | `Fixed` |
+| 🖼️ Image Tokens | Provider-dependent; scales with resolution | `Variable` ← **primary cost driver** |
+| 📝 OCR/Extracted Text | 500–10,000 tokens | `Variable` |
+| ✏️ Text Instructions | 50–300 tokens | `Per-request` |
+| 📤 Output | 100–2,000 tokens | `Variable` |
+
+> 💰 **Key characteristic:** Image tokens are significantly more expensive than text tokens. A single high-resolution image can consume more tokens than an entire text conversation.
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Audit image resolution policies.** Most providers charge based on image tile count, which scales with resolution. A 4K image may consume 4–8× the tokens of a 512px image with negligible quality difference for many tasks.
 2. **Count images per request.** Multi-image requests multiply token costs. Evaluate whether all images are necessary for the task.
 3. **Compare vision versus OCR pipelines.** For text-heavy images (invoices, forms, screenshots), OCR extraction followed by text-based LLM processing is often 5–10× cheaper than direct vision model processing.
 4. **Profile task complexity.** Simple tasks (image classification, yes/no answers) may be routable to smaller vision models or specialized classifiers.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Reduce image resolution to the minimum required for the task (e.g., `low` detail mode) | 40–75% per image |
-| 2 | Use OCR + text LLM instead of vision models for text-extraction tasks | 60–90% cost reduction |
-| 3 | Crop images to regions of interest before submission | 30–60% per image |
-| 4 | Process images individually rather than bundling multiple images per request | 20–40% per-request reduction |
-| 5 | Cache analysis results for identical or near-identical images | 100% on cache hits |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Reduce image resolution to minimum required (e.g., `low` detail mode) | `▓▓▓▓▓▓▓░░░` 40–75% | 🟢 Low |
+| **2** | OCR + text LLM instead of vision models for text-extraction tasks | `▓▓▓▓▓▓▓▓░░` 60–90% | 🟡 Med |
+| **3** | Crop images to regions of interest before submission | `▓▓▓▓▓░░░░░` 30–60% | 🟡 Med |
+| **4** | Process images individually rather than bundling per request | `▓▓▓▓░░░░░░` 20–40% | 🟢 Low |
+| **5** | Cache analysis results for identical or near-identical images | `▓▓▓▓▓▓▓▓▓▓` 100% hits | 🔴 High |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Lower resolution | Dramatic token savings | Loss of fine detail — small text, subtle visual features |
 | OCR pipeline | Order-of-magnitude cheaper | OCR errors propagate to LLM; layout/spatial context is lost |
 | Cropping | Targeted, cheaper analysis | Missing context from surrounding image regions |
 | Routing to smaller models | Lower cost per inference | Reduced capability on complex visual reasoning tasks |
 
-#### Finding the Balance
-
-For multi-modal applications, **the image token multiplier makes resolution control the highest-leverage optimization**. Default to the lowest resolution that preserves task-critical detail. Use OCR pipelines for document-centric tasks and reserve vision models for tasks that genuinely require spatial reasoning, visual context, or non-textual content analysis.
+> [!TIP]
+> **Finding the Balance** — For multi-modal applications, **the image token multiplier makes resolution control the highest-leverage optimization**. Default to the lowest resolution that preserves task-critical detail. Use OCR pipelines for document-centric tasks and reserve vision models for tasks that genuinely require spatial reasoning, visual context, or non-textual content analysis.
 
 ---
 
-### 8. Real-Time Recommendation Systems
+### 🎯 8. Real-Time Recommendation Systems
 
-**Examples:** Product recommendations, content feeds, personalized news, ad targeting, next-best-action engines.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>User history + item catalog</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>50–75%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Latency SLA (P99 &lt; 200ms)</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Product recommendations, content feeds, personalized news, ad targeting, next-best-action engines.
 
-```
-┌────────────────────────────────────────────────────┐
-│  RECOMMENDATION SYSTEM — TOKEN FLOW                │
-│                                                    │
-│  System Prompt ──────── Small (200–600 tokens)     │
-│  User Profile ─────────── Medium (300–2000 tokens) │
-│  Behavioral History ──── Large (1000–8000 tokens)  │
-│  Candidate Items ──────── Large (1000–5000 tokens) │
-│  Contextual Signals ──── Small (100–500 tokens)    │
-│  Output ───────────────── Small (50–300 tokens)    │
-│                                                    │
-│  PRIMARY COST DRIVER: User history + item catalog  │
-│  SECONDARY DRIVER: Real-time latency constraint    │
-│  KEY CHARACTERISTIC: Extreme volume, tight SLAs    │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 200–600 tokens | `Fixed` |
+| 👤 User Profile | 300–2,000 tokens | `Stable` |
+| 📈 Behavioral History | 1,000–8,000 tokens | `Growing` ← **primary cost driver** |
+| 🏷️ Candidate Items | 1,000–5,000 tokens | `Variable` |
+| 🌐 Contextual Signals | 100–500 tokens | `Per-request` |
+| 📤 Output | 50–300 tokens | `Small` |
+
+> ⏱️ **Key characteristic:** Extreme volume with tight SLAs. Every unnecessary token translates directly to latency and SLA risk.
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Profile history depth versus impact.** Recommendation quality typically plateaus after the last 20–50 interactions. Plot recommendation relevance against history window size to identify the point of diminishing returns.
 2. **Measure candidate set waste.** If 30 candidate items are injected into context but only 5 are recommended, 80%+ of candidate tokens are wasted. Pre-filter aggressively before LLM scoring.
 3. **Audit profile granularity.** Full user profiles (purchase history, browse logs, demographic data) are often over-specified. Distill profiles into preference vectors or structured summaries.
 4. **Evaluate latency sensitivity.** Real-time recommendation systems operate under strict P99 latency budgets (often < 200ms). Every unnecessary token translates directly to SLA risk.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Compress user history to a structured preference summary (top categories, recency-weighted signals) | 50–70% history reduction |
-| 2 | Pre-filter candidates with a lightweight retrieval/scoring model before LLM re-ranking | 60–80% candidate set reduction |
-| 3 | Cache user profile summaries; refresh periodically rather than recomputing per request | 30–50% on profile payload |
-| 4 | Use structured output (ranked list with IDs only) instead of natural language explanations | 40–60% output reduction |
-| 5 | Use batching only for offline scoring; avoid in real-time paths under tight SLAs | 20–40% amortized overhead (offline only) |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Compress user history to structured preference summary | `▓▓▓▓▓▓░░░░` 50–70% | 🟡 Med |
+| **2** | Pre-filter candidates with lightweight retrieval/scoring model | `▓▓▓▓▓▓▓░░░` 60–80% | 🟡 Med |
+| **3** | Cache user profile summaries; refresh periodically | `▓▓▓▓▓░░░░░` 30–50% | 🟡 Med |
+| **4** | Structured output (ranked list with IDs only) | `▓▓▓▓▓░░░░░` 40–60% | 🟢 Low |
+| **5** | Batching only for offline scoring; avoid in real-time paths | `▓▓▓▓░░░░░░` 20–40% offline | 🟡 Med |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | History compression | Fits within latency SLAs | Loss of long-tail preference signals; less serendipitous recommendations |
 | Pre-filtering candidates | Smaller context, faster inference | Over-filtering of relevant candidates; reduced recommendation diversity |
 | Cached profile summaries | Reduced per-request computation | Stale profiles miss recent behavioral shifts |
 | Structured output only | Predictable cost and latency | No natural language explanations for transparency or debugging |
 
-#### Finding the Balance
-
-For recommendation systems, **latency and throughput are the binding constraints**. These systems operate at extreme volume (millions of requests/hour) with sub-second SLAs. Optimization is not optional — it is a prerequisite for feasibility. Pre-filter candidates aggressively using traditional ML models, then use the LLM only for final re-ranking of a small candidate set (5–10 items). Cache user summaries with a TTL aligned to behavioral update frequency.
+> [!TIP]
+> **Finding the Balance** — For recommendation systems, **latency and throughput are the binding constraints**. These systems operate at extreme volume (millions of requests/hour) with sub-second SLAs. Optimization is not optional — it is a prerequisite for feasibility. Pre-filter candidates aggressively using traditional ML models, then use the LLM only for final re-ranking of a small candidate set (5–10 items). Cache user summaries with a TTL aligned to behavioral update frequency.
 
 ---
 
-### 9. Data Analysis and Business Intelligence
+### 📊 9. Data Analysis and Business Intelligence
 
-**Examples:** Natural language SQL generation, dashboard narration, anomaly explanation, trend summarization, automated reporting.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Database schema size</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>50–80%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Query correctness</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Natural language SQL generation, dashboard narration, anomaly explanation, trend summarization, automated reporting.
 
-```
-┌────────────────────────────────────────────────────┐
-│  DATA ANALYSIS / BI — TOKEN FLOW                   │
-│                                                    │
-│  System Prompt ──────── Medium (500–1500 tokens)   │
-│  Schema Definitions ──── Large (1000–10000 tokens) │
-│  Query Results ────────── Variable (200–15000 tokens) │
-│  Business Glossary ───── Medium (500–2000 tokens)  │
-│  User Question ────────── Small (20–150 tokens)    │
-│  Output (SQL/Narrative) ─ Medium (100–1000 tokens) │
-│                                                    │
-│  PRIMARY COST DRIVER: Database schema size         │
-│  SECONDARY DRIVER: Query result payloads           │
-│  COMPOUNDING FACTOR: Multi-step analytical queries │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 500–1,500 tokens | `Fixed` |
+| 🗄️ Schema Definitions | 1,000–10,000 tokens | `Stable` ← **primary cost driver** |
+| 📊 Query Results | 200–15,000 tokens | `Variable` |
+| 📖 Business Glossary | 500–2,000 tokens | `Stable` |
+| ❓ User Question | 20–150 tokens | `Per-request` |
+| 📤 Output (SQL/Narrative) | 100–1,000 tokens | `Variable` |
+
+> 🔄 **Compounding factor:** Complex analytical questions decompose into 3–5 SQL queries, each step accumulating prior results into context.
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Measure schema utilization.** Enterprise databases may have hundreds of tables, but a typical analytical question touches 2–5. Including the full schema wastes thousands of tokens per request.
 2. **Profile result set sizes.** Raw SQL results injected into context for narration or follow-up questions can be extremely large. Compare result row counts to what the model actually summarizes.
 3. **Audit glossary overlap.** Business glossaries often duplicate information already implicit in well-named schema columns. Measure how often glossary entries influence output quality.
 4. **Track multi-step query chains.** Complex analytical questions decompose into 3–5 SQL queries. Each step accumulates prior results into context, compounding token consumption.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Implement schema pruning: include only tables and columns relevant to the detected query intent | 60–85% schema reduction |
-| 2 | Truncate/sample query results — inject top-N rows plus aggregates instead of full result sets | 50–80% result payload reduction |
-| 3 | Cache schema metadata and glossary via prefix caching | 50–90% on stable prefix |
-| 4 | Compress intermediate results in multi-step chains to summary statistics | 40–60% per analytical step |
-| 5 | Pre-classify query complexity: route simple lookups to lightweight templates, reserve LLM for complex joins and narrative generation | 30–50% on simple queries |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Schema pruning: include only tables/columns relevant to query intent | `▓▓▓▓▓▓▓▓░░` 60–85% | 🟡 Med |
+| **2** | Truncate/sample results — top-N rows + aggregates instead of full sets | `▓▓▓▓▓▓▓░░░` 50–80% | 🟢 Low |
+| **3** | Cache schema metadata and glossary via prefix caching | `▓▓▓▓▓▓▓▓░░` 50–90% | 🟢 Low |
+| **4** | Compress intermediate results in multi-step chains to summary stats | `▓▓▓▓▓▓░░░░` 40–60% | 🟡 Med |
+| **5** | Route simple lookups to lightweight templates; LLM for complex queries | `▓▓▓▓▓░░░░░` 30–50% | 🟡 Med |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Schema pruning | Dramatic input reduction on large databases | Missed joins; model generates queries referencing excluded tables |
 | Result truncation | Manageable context for large datasets | Incomplete analysis; model draws conclusions from partial data |
 | Intermediate compression | Sustainable multi-step chains | Loss of granular data needed for drill-down follow-ups |
 | Query routing | Lower cost on simple questions | Misclassification causes template-based answers for complex questions |
 
-#### Finding the Balance
-
-For data analysis, **query correctness and analytical accuracy are the binding constraints**. Incorrect SQL or misleading narration erodes user trust rapidly. Schema pruning is the highest-impact optimization — implement it using query intent classification or embedding-based schema retrieval. Always retain foreign key relationships and index hints for pruned schemas. Truncate result sets for narration tasks but provide full results when the user requests raw data export.
+> [!TIP]
+> **Finding the Balance** — For data analysis, **query correctness and analytical accuracy are the binding constraints**. Incorrect SQL or misleading narration erodes user trust rapidly. Schema pruning is the highest-impact optimization — implement it using query intent classification or embedding-based schema retrieval. Always retain foreign key relationships and index hints for pruned schemas. Truncate result sets for narration tasks but provide full results when the user requests raw data export.
 
 ---
 
-### 10. Workflow Orchestration and RPA
+### ⚙️ 10. Workflow Orchestration and RPA
 
-**Examples:** Automated email processing, ticket routing, approval workflows, document routing, form processing, CRM automation.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Input document variety</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>50–80%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Audit compliance</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Automated email processing, ticket routing, approval workflows, document routing, form processing, CRM automation.
 
-```
-┌────────────────────────────────────────────────────┐
-│  WORKFLOW / RPA — TOKEN FLOW                       │
-│                                                    │
-│  System Prompt ──────── Medium (500–1500 tokens)   │
-│  Workflow Rules ────────── Medium (500–3000 tokens) │
-│  Input Document ───────── Variable (200–8000)      │
-│  Historical Decisions ── Medium (500–2000 tokens)  │
-│  Output (Action/Route) ── Small (20–200 tokens)    │
-│                                                    │
-│  PRIMARY COST DRIVER: Input document variety       │
-│  SECONDARY DRIVER: Rule set complexity             │
-│  KEY CHARACTERISTIC: High volume, deterministic    │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 500–1,500 tokens | `Fixed` |
+| 📜 Workflow Rules | 500–3,000 tokens | `Semi-stable` |
+| 📄 Input Document | 200–8,000 tokens | `Variable` ← **primary cost driver** |
+| 📂 Historical Decisions | 500–2,000 tokens | `Stable` |
+| 📤 Output (Action/Route) | 20–200 tokens | `Small` |
+
+> 🔁 **Key characteristic:** High volume, deterministic outputs. Most decisions follow simple rules that do not require LLM inference.
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Classify decision complexity.** Most workflow decisions follow simple rules (keyword matching, field lookups) that do not require LLM inference. Quantify what percentage of your volume genuinely requires natural language understanding.
 2. **Measure rule set utilization.** Complex rule engines may define 50+ routing rules, but a single document type triggers only 3–5. Profile which rules are invoked per document category.
 3. **Audit input document verbosity.** Emails, tickets, and forms contain signatures, disclaimers, headers, and metadata irrelevant to the routing decision. Measure the signal-to-noise ratio.
 4. **Track decision consistency.** If the LLM produces the same routing decision for 95% of a document category, that category should be handled by a deterministic rule — not an LLM call.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Implement a rules-first architecture: deterministic rules handle simple cases, LLM handles exceptions and ambiguity | 50–80% volume reduction to LLM |
-| 2 | Pre-process input documents: strip signatures, disclaimers, headers, HTML/CSS artifacts | 20–40% input reduction |
-| 3 | Load only relevant workflow rules per document category, not the full rule set | 30–60% rule payload reduction |
-| 4 | Use structured output (action enum + confidence) instead of explanatory text | 40–70% output reduction |
-| 5 | Cache decisions for recurring document patterns (e.g., same sender, same template) | 100% on cache hits |
-| 6 | Batch similar documents for parallel processing with shared rule context | 20–35% amortized overhead |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Rules-first architecture: deterministic rules for simple cases, LLM for exceptions | `▓▓▓▓▓▓▓▓░░` 50–80% | 🟡 Med |
+| **2** | Pre-process inputs: strip signatures, disclaimers, headers, HTML/CSS artifacts | `▓▓▓▓░░░░░░` 20–40% | 🟢 Low |
+| **3** | Load only relevant workflow rules per document category | `▓▓▓▓▓░░░░░` 30–60% | 🟡 Med |
+| **4** | Structured output (action enum + confidence) instead of explanatory text | `▓▓▓▓▓▓░░░░` 40–70% | 🟢 Low |
+| **5** | Cache decisions for recurring document patterns | `▓▓▓▓▓▓▓▓▓▓` 100% hits | 🟡 Med |
+| **6** | Batch similar documents with shared rule context | `▓▓▓░░░░░░░` 20–35% | 🟡 Med |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Rules-first routing | Dramatic cost reduction on predictable cases | Maintenance burden for rule logic; edge cases falling through |
 | Input stripping | Cleaner context, lower cost | Accidental removal of content that contains routing signals (e.g., urgency in signature blocks) |
 | Selective rule loading | Smaller prompt per request | Missed rules when document category is misclassified |
 | Decision caching | Zero cost on repeats | Stale decisions when workflow rules or policies change |
 
-#### Finding the Balance
-
-For workflow orchestration, **decision accuracy and audit-trail integrity are the binding constraints**. These systems often feed into regulated processes where incorrect routing has compliance consequences. The rules-first approach is the single highest-impact optimization — build the LLM as a fallback for ambiguity, not the default path. Maintain confidence thresholds: if the LLM's routing confidence falls below a defined floor, escalate to human review rather than making a low-confidence automated decision.
+> [!TIP]
+> **Finding the Balance** — For workflow orchestration, **decision accuracy and audit-trail integrity are the binding constraints**. These systems often feed into regulated processes where incorrect routing has compliance consequences. The rules-first approach is the single highest-impact optimization — build the LLM as a fallback for ambiguity, not the default path. Maintain confidence thresholds: if the LLM's routing confidence falls below a defined floor, escalate to human review rather than making a low-confidence automated decision.
 
 ---
 
-### 11. E-Commerce Product Experiences
+### 🛒 11. E-Commerce Product Experiences
 
-**Examples:** Product description generation, review summarization, conversational shopping assistants, size/fit recommendations, comparison engines, dynamic FAQ generation.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Review corpus injection</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>45–70%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Conversion rate</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Product description generation, review summarization, conversational shopping assistants, size/fit recommendations, comparison engines, dynamic FAQ generation.
 
-```
-┌────────────────────────────────────────────────────┐
-│  E-COMMERCE — TOKEN FLOW                           │
-│                                                    │
-│  System Prompt ──────── Medium (500–1500 tokens)   │
-│  Product Catalog Data ── Variable (300–5000 tokens) │
-│  Customer Reviews ─────── Large (1000–10000 tokens) │
-│  User Preferences ─────── Small (200–800 tokens)   │
-│  Conversation History ── Variable (0–3000 tokens)  │
-│  Output ───────────────── Medium (100–1500 tokens)  │
-│                                                    │
-│  PRIMARY COST DRIVER: Review corpus injection      │
-│  SECONDARY DRIVER: Catalog breadth in comparisons  │
-│  KEY CHARACTERISTIC: Revenue-tied; conversion focus │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 500–1,500 tokens | `Fixed` |
+| 📦 Product Catalog Data | 300–5,000 tokens | `Variable` |
+| ⭐ Customer Reviews | 1,000–10,000 tokens | `Variable` ← **primary cost driver** |
+| 👤 User Preferences | 200–800 tokens | `Stable` |
+| 💬 Conversation History | 0–3,000 tokens | `Variable` |
+| 📤 Output | 100–1,500 tokens | `Variable` |
+
+> 💰 **Key characteristic:** Revenue-tied. Token spend should be allocated proportionally to conversion impact across surfaces.
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Measure review redundancy.** Customer reviews are highly repetitive — the same praise and complaints recur across dozens of reviews. Profile unique information yield per review count included.
 2. **Audit catalog scope in comparisons.** "Compare these 5 products" requests inject full specifications for all items. Identify which attributes actually differentiate the products.
 3. **Track conversion attribution.** Not all generated content drives equal revenue. Map token spend to conversion impact — product descriptions may convert at 10× the rate of dynamic FAQ content.
 4. **Profile seasonal/promotional churn.** Product data, pricing, and availability change frequently. Cached content based on stale data causes customer-facing errors.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Pre-aggregate reviews into structured sentiment summaries (top pros, top cons, common themes) | 70–90% review reduction |
-| 2 | For comparisons, inject only differentiating attributes, not full spec sheets | 40–60% catalog reduction |
-| 3 | Cache product descriptions and summaries with TTL tied to catalog update cycles | 100% on cache hits |
-| 4 | Use structured product data (JSON) instead of prose catalog entries | 20–35% per product |
-| 5 | Allocate token budgets proportionally to conversion impact — invest more in high-converting surfaces | ROI-optimized allocation |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Pre-aggregate reviews into structured sentiment summaries | `▓▓▓▓▓▓▓▓░░` 70–90% | 🟡 Med |
+| **2** | For comparisons, inject only differentiating attributes | `▓▓▓▓▓▓░░░░` 40–60% | 🟡 Med |
+| **3** | Cache product descriptions/summaries with TTL tied to catalog cycles | `▓▓▓▓▓▓▓▓▓▓` 100% hits | 🟡 Med |
+| **4** | Structured product data (JSON) instead of prose catalog entries | `▓▓▓░░░░░░░` 20–35% | 🟢 Low |
+| **5** | Allocate token budgets proportionally to conversion impact | `▓▓▓▓▓░░░░░` ROI-optimized | 🟡 Med |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Review aggregation | Massive input reduction | Loss of individual customer voice; nuanced edge-case feedback lost |
 | Differentiating attributes only | Compact comparison context | Missing shared attributes that matter to specific customer segments |
 | Aggressive caching | Near-zero marginal cost | Stale pricing, availability, or description data shown to customers |
 | Budget allocation by conversion | Higher ROI per token | Under-investing in early-funnel content that drives discovery |
 
-#### Finding the Balance
-
-For e-commerce, **conversion rate and revenue impact are the binding constraints**. Optimize aggressively on low-conversion surfaces (FAQ, general info) and invest token budget on high-conversion interactions (personalized recommendations, comparison assists, size/fit guidance). Pre-aggregate reviews as a standard practice — 10 aggregated themes convey more actionable information than 50 raw reviews. Set cache TTLs that match your catalog update frequency; stale pricing is a worse outcome than token waste.
+> [!TIP]
+> **Finding the Balance** — For e-commerce, **conversion rate and revenue impact are the binding constraints**. Optimize aggressively on low-conversion surfaces (FAQ, general info) and invest token budget on high-conversion interactions (personalized recommendations, comparison assists, size/fit guidance). Pre-aggregate reviews as a standard practice — 10 aggregated themes convey more actionable information than 50 raw reviews. Set cache TTLs that match your catalog update frequency; stale pricing is a worse outcome than token waste.
 
 ---
 
-### 12. Education and Tutoring Platforms
+### 🎓 12. Education and Tutoring Platforms
 
-**Examples:** Adaptive tutoring systems, homework assistance, language learning, exam preparation, curriculum generation, student feedback.
+<table>
+<tr><td width="33%" align="center"><strong>🎯 Primary Cost Driver</strong><br/>Curriculum + conversation</td>
+<td width="33%" align="center"><strong>⚡ Typical Savings</strong><br/>40–65%</td>
+<td width="33%" align="center"><strong>🛡️ Binding Constraint</strong><br/>Learning outcomes</td></tr>
+</table>
 
-#### Context Profile
+> **Examples:** Adaptive tutoring systems, homework assistance, language learning, exam preparation, curriculum generation, student feedback.
 
-```
-┌────────────────────────────────────────────────────┐
-│  EDUCATION / TUTORING — TOKEN FLOW                 │
-│                                                    │
-│  System Prompt ──────── Large (1000–3000 tokens)   │
-│  Learning Objectives ──── Small (200–800 tokens)   │
-│  Student Profile ──────── Medium (500–2000 tokens)  │
-│  Curriculum Context ───── Large (1000–8000 tokens)  │
-│  Conversation History ── Growing (unbounded)        │
-│  Output ───────────────── Medium (200–2000 tokens)  │
-│                                                    │
-│  PRIMARY COST DRIVER: Curriculum + conversation    │
-│  SECONDARY DRIVER: Personalization depth           │
-│  KEY CHARACTERISTIC: Long sessions, adaptive flow  │
-└────────────────────────────────────────────────────┘
-```
+#### 📊 Context Profile
 
-#### Identifying Optimization Opportunities
+| Component | Size | Type |
+|:---|:---|:---|
+| 🔒 System Prompt | 1,000–3,000 tokens | `Fixed` |
+| 🎯 Learning Objectives | 200–800 tokens | `Per-session` |
+| 🧑‍🎓 Student Profile | 500–2,000 tokens | `Stable` |
+| 📚 Curriculum Context | 1,000–8,000 tokens | `Semi-stable` ← **primary cost driver** |
+| 💬 Conversation History | Unbounded | `Growing` |
+| 📤 Output | 200–2,000 tokens | `Variable` |
+
+> 📏 **Key characteristic:** Long sessions with adaptive flow. Conversation context can exceed 20,000 tokens by mid-session without active management.
+
+#### 🔍 Identifying Optimization Opportunities
 
 1. **Profile session length distribution.** Tutoring sessions can span 30–60+ exchanges. Without active management, conversation context alone can exceed 20,000 tokens by mid-session.
 2. **Measure curriculum reuse.** The same lesson material is delivered to thousands of students. Profile how much curriculum context is identical across sessions and candidate for caching.
 3. **Audit student model granularity.** Detailed student models (misconception history, skill levels per topic, learning style) are valuable but verbose. Evaluate which model attributes actually influence output personalization.
 4. **Track pedagogical pattern repetition.** Tutoring follows predictable patterns (explain → example → practice → feedback). System prompts encoding these patterns are stable and cacheable.
 
-#### Optimization Steps
+#### ⚙️ Optimization Roadmap
 
-| Step | Action | Expected Impact |
-|---|---|---|
-| 1 | Implement aggressive conversation summarization: retain learning milestones and misconceptions, discard solved exercises | 40–60% conversation reduction |
-| 2 | Cache curriculum content and pedagogical instructions via prefix caching | 50–90% on stable lesson context |
-| 3 | Compress student profiles to structured skill vectors with only active learning objectives | 30–50% model reduction |
-| 4 | Scope curriculum retrieval to the current topic and immediate prerequisites, not the full syllabus | 50–70% curriculum reduction |
-| 5 | Use tiered output: brief hints and confirmations for practice turns, detailed explanations only when the student is stuck | 30–50% output reduction |
+| | Action | Impact | Effort |
+|:---:|:---|:---|:---:|
+| **1** | Aggressive conversation summarization: retain milestones and misconceptions | `▓▓▓▓▓▓░░░░` 40–60% | 🟡 Med |
+| **2** | Cache curriculum content and pedagogical instructions via prefix caching | `▓▓▓▓▓▓▓▓░░` 50–90% | 🟢 Low |
+| **3** | Compress student profiles to structured skill vectors | `▓▓▓▓▓░░░░░` 30–50% | 🟡 Med |
+| **4** | Scope curriculum retrieval to current topic + immediate prerequisites | `▓▓▓▓▓▓░░░░` 50–70% | 🟡 Med |
+| **5** | Tiered output: brief hints for practice, detailed explanations when stuck | `▓▓▓▓▓░░░░░` 30–50% | 🟢 Low |
 
-#### Trade-Offs
+#### ⚖️ Trade-Offs
 
-| Optimization | What You Gain | What You Risk |
-|---|---|---|
+| Optimization | ✅ What You Gain | ⚠️ What You Risk |
+|:---|:---|:---|
 | Conversation summarization | Sustainable long sessions | Loss of specific student statements that reveal deeper misconceptions |
 | Student model compression | Compact personalization context | Reduced personalization fidelity; system may miss nuanced learning patterns |
 | Topic-scoped curriculum | Focused, relevant context | Missing cross-topic connections that enable richer explanations |
 | Tiered output length | Lower cost on routine interactions | Students may perceive brief responses as unhelpful or dismissive |
 
-#### Finding the Balance
-
-For education platforms, **learning outcomes and student engagement are the binding constraints**. The challenge is unique: sessions are long (demanding aggressive history management) but personalization is critical (demanding rich context). Start with curriculum caching (zero quality risk, high volume reuse) and conversation summarization that preserves misconception history and learning milestones — these are the pedagogically essential signals. Minimize non-essential context. Apply tiered output deliberately: students who answer correctly need brief confirmation, students who struggle need detailed scaffolded explanations. Allocate token budget based on pedagogical need, not uniform distribution.
+> [!TIP]
+> **Finding the Balance** — For education platforms, **learning outcomes and student engagement are the binding constraints**. The challenge is unique: sessions are long (demanding aggressive history management) but personalization is critical (demanding rich context). Start with curriculum caching (zero quality risk, high volume reuse) and conversation summarization that preserves misconception history and learning milestones — these are the pedagogically essential signals. Minimize non-essential context. Apply tiered output deliberately: students who answer correctly need brief confirmation, students who struggle need detailed scaffolded explanations. Allocate token budget based on pedagogical need, not uniform distribution.
 
 ---
 
